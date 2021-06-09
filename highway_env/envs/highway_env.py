@@ -109,5 +109,5 @@ class HighwayEnv(AbstractEnv):
 
 register(
     id='highway-v0',
-    entry_point='highway_env.envs:HighwayEnv',
+    entry_point='modified_highway_env.highway_env.envs.highway_env:HighwayEnv',
 )
