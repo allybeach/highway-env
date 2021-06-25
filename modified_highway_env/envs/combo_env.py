@@ -57,6 +57,59 @@ class ComboEnv(AbstractEnv):
         """Create a road composed of straight adjacent lanes."""
         self.road = Road(network=RoadNetwork.straight_road_network(self.config["lanes_count"], speed_limit=30),
                          np_random=self.np_random, record_history=self.config["show_trajectories"])
+    def _make_road(self) -> None:
+        """
+        Make a road composed of a straight highway and a merging lane.
+
+        :return: the road
+        """
+        net = RoadNetwork()
+
+        # Highway lanes
+        ends = [150, 80, 80, 150]  # Before, converging, merge, after
+        c, s, n = LineType.CONTINUOUS_LINE, LineType.STRIPED, LineType.NONE
+        y = [0, StraightLane.DEFAULT_WIDTH]
+        line_type = [[c, s], [n, c]]
+        line_type_merge = [[c, s], [n, s]]
+        for i in range(3):
+            # lane that is merging away 
+            net.add_lane("a", "b", StraightLane([0, y[i]], [sum(ends[:2]), y[i]], line_types=line_type[i]))
+            # lane that is getting merged into 
+            net.add_lane("b", "c", StraightLane([sum(ends[:2]), y[i]], [sum(ends[:3]), y[i]], line_types=line_type_merge[i]))
+            
+            net.add_lane("c", "d", StraightLane([sum(ends[:3]), y[i]], [sum(ends), y[i]], line_types=line_type[i]))
+            # new merging lane 
+            net.add_lane("d", "e", StraightLane([sum(ends[:3]), y[0]], [sum(ends), y[i]], line_types=line_type[i]))
+
+
+        # Merging lane - first one that merges into highway 
+        amplitude = 3.25
+        ljk = StraightLane([0, 6.5 + 4 + 4], [ends[0], 6.5 + 4 + 4], line_types=[c, c], forbidden=True)
+        lkb = SineLane(ljk.position(ends[0], -amplitude), ljk.position(sum(ends[:2]), -amplitude),
+                       amplitude, 2 * np.pi / (2*ends[1]), np.pi / 2, line_types=[c, c], forbidden=True)
+        lbc = StraightLane(lkb.position(ends[1], 0), lkb.position(ends[1], 0) + [ends[2], 0],
+                           line_types=[n, c], forbidden=True)
+        
+        net.add_lane("j", "k", ljk)
+        net.add_lane("k", "b", lkb)
+        net.add_lane("b", "c", lbc)
+
+        # Merging lane - second one that merges away from highway 
+        amplitude = 3.25
+        lab = StraightLane([0, 6.5 + 4 + 4], [ends[0], 6.5 + 4 + 4], line_types=[c, c], forbidden=True)
+        lbp = SineLane(ljk.position(ends[0], -amplitude), ljk.position(sum(ends[:2]), -amplitude),
+                       amplitude, 2 * np.pi / (2*ends[1]), np.pi / 2, line_types=[c, c], forbidden=True)
+        lpq = StraightLane(lkb.position(ends[1], 0), lkb.position(ends[1], 0) + [ends[2], 0],
+                           line_types=[n, c], forbidden=True)
+
+        net.add_lane("a", "b", ljk)
+        net.add_lane("b", "p", lkb)
+        net.add_lane("p", "q", lbc)
+
+        road = Road(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
+        road.objects.append(Obstacle(road, lbc.position(ends[2], 0)))
+        self.road = road
+        
 
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
@@ -93,12 +146,21 @@ class ComboEnv(AbstractEnv):
             + self.config["collision_reward"] * self.vehicle.crashed \
             + self.config["right_lane_reward"] * lane / max(len(neighbours) - 1, 1) \
             + self.config["high_speed_reward"] * np.clip(scaled_speed, 0, 1)
+
+        # Altruistic penalty
+        for vehicle in self.road.vehicles:
+            if vehicle.lane_index == ("b", "c", 2) and isinstance(vehicle, ControlledVehicle):
+                reward += self.config["merging_speed_reward"] * \
+                          (vehicle.target_speed - vehicle.speed) / vehicle.target_speed
+
+        # TODO: watch out for the action_reward for lane changing - took out the action_reward
         reward = utils.lmap(reward,
                           [self.config["collision_reward"],
                            self.config["high_speed_reward"] + self.config["right_lane_reward"]],
                           [0, 1])
         reward = 0 if not self.vehicle.on_road else reward
         return reward
+
 
     def _is_terminal(self) -> bool:
         """The episode is over if the ego vehicle crashed or the time is out."""
