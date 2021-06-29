@@ -213,7 +213,7 @@ class ObservationGraphics(object):
 
     @classmethod
     def display(cls, obs, sim_surface):
-        from highway_env.envs.common.observation import LidarObservation
+        from modified_highway_env.envs.common.observation import LidarObservation
         if isinstance(obs, LidarObservation):
             cls.display_grid(obs, sim_surface)
 
