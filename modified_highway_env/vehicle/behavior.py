@@ -504,3 +504,57 @@ class DefensiveVehicle(LinearVehicle):
     ACCELERATION_PARAMETERS = [MERGE_ACC_GAIN / ((1 - MERGE_VEL_RATIO) * MERGE_TARGET_VEL),
                                MERGE_ACC_GAIN / (MERGE_VEL_RATIO * MERGE_TARGET_VEL),
                                2.0]
+
+
+class DevAggressiveVehicle(IDMVehicle):
+    # Longitudinal policy parameters
+    ACC_MAX = 10.0  # [m/s2]
+    """Maximum acceleration."""
+
+    COMFORT_ACC_MAX = 5.0  # [m/s2]
+    """Desired maximum acceleration."""
+
+    COMFORT_ACC_MIN = -5.0  # [m/s2]
+    """Desired maximum deceleration."""
+
+    DISTANCE_WANTED = 5.0 + ControlledVehicle.LENGTH  # [m]
+    """Desired jam distance to the front vehicle."""
+
+    TIME_WANTED = 1.5  # [s]
+    """Desired time gap to the front vehicle."""
+
+    DELTA = 4.0  # []
+    """Exponent of the velocity term."""
+
+    # Lateral policy parameters
+    POLITENESS = 0.0  # in [0, 1]
+    LANE_CHANGE_MIN_ACC_GAIN = 0.  # [m/s2]
+    LANE_CHANGE_MAX_BRAKING_IMPOSED = 2.0  # [m/s2]
+    LANE_CHANGE_DELAY = 0.2  # [s]
+    
+
+class DevPoliteVehicle(IDMVehicle):
+    # Longitudinal policy parameters
+    ACC_MAX = 6.0  # [m/s2]
+    """Maximum acceleration."""
+
+    COMFORT_ACC_MAX = 3.0  # [m/s2]
+    """Desired maximum acceleration."""
+
+    COMFORT_ACC_MIN = -5.0  # [m/s2]
+    """Desired maximum deceleration."""
+
+    DISTANCE_WANTED = 5.0 + ControlledVehicle.LENGTH  # [m]
+    """Desired jam distance to the front vehicle."""
+
+    TIME_WANTED = 2.5  # [s]
+    """Desired time gap to the front vehicle."""
+
+    DELTA = 4.0  # []
+    """Exponent of the velocity term."""
+
+    # Lateral policy parameters
+    POLITENESS = 0.  # in [0, 1]
+    LANE_CHANGE_MIN_ACC_GAIN = 0.2  # [m/s2]
+    LANE_CHANGE_MAX_BRAKING_IMPOSED = 2.0  # [m/s2]
+    LANE_CHANGE_DELAY = 1.0  # [s]
